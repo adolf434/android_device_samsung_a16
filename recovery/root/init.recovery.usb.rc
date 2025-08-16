@@ -186,3 +186,28 @@ on property:sys.usb.ffs.ready=1 && property:sys.usb.config=mtp,adb
     symlink /config/usb_gadget/g1/configs/b.1 /config/usb_gadget/g1/os_desc/b.1
     write /config/usb_gadget/g1/UDC ${vendor.usb.controller}
     setprop sys.usb.state ${sys.usb.config}
+
+# Used to disable USB when switching states and to clean up all functions
+on property:sys.usb.config=none
+    # Stop services
+    stop adbd
+    stop fastbootd
+    setprop sys.usb.ffs.ready 0
+
+    # Unbind the USB controller to disable the gadget
+    write /config/usb_gadget/g1/UDC ""
+
+    # NUKE STEP: Centralized cleanup of all function symlinks
+    rm /config/usb_gadget/g1/configs/b.1/ffs.adb
+    rm /config/usb_gadget/g1/configs/b.1/ffs.mtp
+    rm /config/usb_gadget/g1/configs/b.1/ss_mon.mtp
+    rm /config/usb_gadget/g1/configs/b.1/ss_mon.etc
+    rm /config/usb_gadget/g1/configs/b.1/ffs.fastboot
+
+    # Reset device class to unconfigured
+    write /config/usb_gadget/g1/bDeviceClass 0
+    write /config/usb_gadget/g1/bDeviceSubClass 0
+    write /config/usb_gadget/g1/bDeviceProtocol 0
+
+    # Set the final state
+    setprop sys.usb.state ${sys.usb.config}
